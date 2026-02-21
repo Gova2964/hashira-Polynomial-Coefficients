@@ -1,0 +1,86 @@
+import java.io.File;
+import java.nio.file.Files;
+import java.util.*;
+import java.math.BigInteger;
+import org.json.JSONObject;
+
+public class Main {
+
+    // Multiply two polynomials (BigInteger version)
+    public static BigInteger[] multiply(BigInteger[] a, BigInteger[] b) {
+        BigInteger[] result = new BigInteger[a.length + b.length - 1];
+        Arrays.fill(result, BigInteger.ZERO);
+
+        for (int i = 0; i < a.length; i++) {
+            for (int j = 0; j < b.length; j++) {
+                result[i + j] = result[i + j].add(a[i].multiply(b[j]));
+            }
+        }
+        return result;
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        String content = new String(Files.readAllBytes(new File("input.json").toPath()));
+        JSONObject data = new JSONObject(content);
+
+        int k = data.getJSONObject("keys").getInt("k");
+
+        List<BigInteger[]> roots = new ArrayList<>();
+
+        for (String key : data.keySet()) {
+            if (!key.equals("keys")) {
+
+                BigInteger x = new BigInteger(key);
+                JSONObject obj = data.getJSONObject(key);
+
+                int base = Integer.parseInt(obj.getString("base"));
+                String value = obj.getString("value");
+
+                BigInteger y = new BigInteger(value, base);
+
+                roots.add(new BigInteger[]{x, y});
+            }
+        }
+
+        // Take first k roots
+        roots = roots.subList(0, k);
+
+        BigInteger[] finalPoly = new BigInteger[k];
+        Arrays.fill(finalPoly, BigInteger.ZERO);
+
+        // Lagrange Interpolation
+        for (int i = 0; i < k; i++) {
+
+            BigInteger[] term = {BigInteger.ONE};
+            BigInteger denom = BigInteger.ONE;
+
+            for (int j = 0; j < k; j++) {
+                if (i != j) {
+
+                    BigInteger[] temp = {
+                        roots.get(j)[0].negate(),
+                        BigInteger.ONE
+                    };
+
+                    term = multiply(term, temp);
+
+                    denom = denom.multiply(
+                        roots.get(i)[0].subtract(roots.get(j)[0])
+                    );
+                }
+            }
+
+            BigInteger scale = roots.get(i)[1].divide(denom);
+
+            for (int t = 0; t < term.length; t++) {
+                finalPoly[t] = finalPoly[t].add(term[t].multiply(scale));
+            }
+        }
+
+        System.out.println("Polynomial Coefficients:");
+        for (BigInteger coef : finalPoly) {
+            System.out.print(coef + " ");
+        }
+    }
+}
