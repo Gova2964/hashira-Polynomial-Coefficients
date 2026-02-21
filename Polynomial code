@@ -1,0 +1,81 @@
+import java.io.File;
+import java.nio.file.Files;
+import java.util.*;
+import org.json.JSONObject;
+
+public class Main {
+
+    // Convert value from given base to decimal
+    public static long convertToDecimal(String value, int base) {
+        return Long.parseLong(value, base);
+    }
+
+    // Multiply two polynomials
+    public static double[] multiply(double[] a, double[] b) {
+        double[] result = new double[a.length + b.length - 1];
+
+        for (int i = 0; i < a.length; i++) {
+            for (int j = 0; j < b.length; j++) {
+                result[i + j] += a[i] * b[j];
+            }
+        }
+        return result;
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        String content = new String(Files.readAllBytes(new File("input.json").toPath()));
+        JSONObject data = new JSONObject(content);
+
+        int n = data.getJSONObject("keys").getInt("n");
+        int k = data.getJSONObject("keys").getInt("k");
+
+        List<double[]> roots = new ArrayList<>();
+
+        for (String key : data.keySet()) {
+            if (!key.equals("keys")) {
+                double x = Double.parseDouble(key);
+                JSONObject obj = data.getJSONObject(key);
+
+                int base = Integer.parseInt(obj.getString("base"));
+                String value = obj.getString("value");
+
+                double y = convertToDecimal(value, base);
+                roots.add(new double[]{x, y});
+            }
+        }
+
+        // Use first k roots
+        roots = roots.subList(0, k);
+
+        int degree = k - 1;
+        double[] finalPoly = new double[degree + 1];
+
+        // Lagrange Interpolation
+        for (int i = 0; i < k; i++) {
+
+            double[] term = {1};
+            double denom = 1;
+
+            for (int j = 0; j < k; j++) {
+                if (i != j) {
+                    double[] temp = {-roots.get(j)[0], 1};
+                    term = multiply(term, temp);
+                    denom *= (roots.get(i)[0] - roots.get(j)[0]);
+                }
+            }
+
+            double scale = roots.get(i)[1] / denom;
+
+            for (int t = 0; t < term.length; t++) {
+                finalPoly[t] += term[t] * scale;
+            }
+        }
+
+        System.out.println("Polynomial Coefficients (constant to highest degree):");
+
+        for (double coef : finalPoly) {
+            System.out.print(Math.round(coef) + " ");
+        }
+    }
+}
